@@ -8,7 +8,7 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, NoSerializationVerificationNe
 import akka.contrib.stream.{ InputStreamPublisher, OutputStreamSubscriber }
 import akka.stream.Attributes
 import akka.stream.actor.{ ActorPublisher, ActorSubscriber }
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{ Sink, Source }
 import akka.util.{ ByteString, Helpers }
 import java.io.File
 import java.lang.{ Process => JavaProcess, ProcessBuilder => JavaProcessBuilder }
@@ -28,7 +28,7 @@ object BlockingProcess {
    * @param stdout a `org.reactivestreams.Publisher` for the standard output stream of the process
    * @param stderr a `org.reactivestreams.Publisher` for the standard error stream of the process
    */
-  case class Started(stdin: Subscriber[ByteString], stdout: Source[ByteString, Future[Long]], stderr: Publisher[ByteString])
+  case class Started(stdin: Sink[ByteString, Future[Long]], stdout: Source[ByteString, Future[Long]], stderr: Publisher[ByteString])
     extends NoSerializationVerificationNeeded
 
   /**
@@ -109,15 +109,13 @@ class BlockingProcess(
     }
 
     try {
-      val stdin =
-        context.actorOf(OutputStreamSubscriber.props(process.getOutputStream), "stdin")
-
+      val stdin = Sink.outputStream(process.getOutputStream)
       val stdout = Source.inputStream(process.getInputStream)
 
       val stderr =
         context.watch(context.actorOf(InputStreamPublisher.props(process.getErrorStream, stdioTimeout), "stderr"))
 
-      context.parent ! Started(ActorSubscriber(stdin), stdout, ActorPublisher(stderr))
+      context.parent ! Started(stdin, stdout, ActorPublisher(stderr))
     } finally {
       context.watch(context.actorOf(ProcessDestroyer.props(process, context.parent), "process-destroyer"))
     }

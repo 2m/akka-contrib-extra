@@ -119,7 +119,7 @@ class Receiver(probe: ActorRef, command: String, stdinInput: immutable.Seq[Strin
         .runWith(Sink.foreach(probe.tell(_, Actor.noSender)))
         .onComplete(_ => self ! "flow-complete")
 
-      Source(stdinInput).map(ByteString.apply).runWith(Sink(stdin))
+      Source(stdinInput).map(ByteString.apply).runWith(stdin)
     case "flow-complete" =>
       unstashAll()
       context become {
