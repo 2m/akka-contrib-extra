@@ -28,7 +28,7 @@ object BlockingProcess {
    * @param stdout a `org.reactivestreams.Publisher` for the standard output stream of the process
    * @param stderr a `org.reactivestreams.Publisher` for the standard error stream of the process
    */
-  case class Started(stdin: Sink[ByteString, Future[Long]], stdout: Source[ByteString, Future[Long]], stderr: Publisher[ByteString])
+  case class Started(stdin: Sink[ByteString, Future[Long]], stdout: Source[ByteString, Future[Long]], stderr: Source[ByteString, Future[Long]])
     extends NoSerializationVerificationNeeded
 
   /**
@@ -111,11 +111,9 @@ class BlockingProcess(
     try {
       val stdin = Sink.outputStream(process.getOutputStream)
       val stdout = Source.inputStream(process.getInputStream)
+      val stderr = Source.inputStream(process.getErrorStream)
 
-      val stderr =
-        context.watch(context.actorOf(InputStreamPublisher.props(process.getErrorStream, stdioTimeout), "stderr"))
-
-      context.parent ! Started(stdin, stdout, ActorPublisher(stderr))
+      context.parent ! Started(stdin, stdout, stderr)
     } finally {
       context.watch(context.actorOf(ProcessDestroyer.props(process, context.parent), "process-destroyer"))
     }
