@@ -101,7 +101,7 @@ class Receiver(probe: ActorRef, command: String, stdinInput: immutable.Seq[Strin
     with Stash {
 
   val process = context.actorOf(BlockingProcess.props(List(command)), "process" + nameSeed)
-  val materializerSettings = ActorMaterializerSettings.create(context.system).withInputBuffer(initialSize = 1, maxSize = 1)
+  val materializerSettings = ActorMaterializerSettings.create(context.system)
   implicit val materializer = ActorMaterializer(materializerSettings)
 
   import FlowGraph.Implicits._
@@ -121,6 +121,7 @@ class Receiver(probe: ActorRef, command: String, stdinInput: immutable.Seq[Strin
 
       Source(stdinInput).map(ByteString.apply).runWith(stdin)
     case "flow-complete" =>
+      println("Flow is complete!")
       unstashAll()
       context become {
         case exited: BlockingProcess.Exited => probe ! exited

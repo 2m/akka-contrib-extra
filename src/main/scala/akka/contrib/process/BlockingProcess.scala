@@ -110,8 +110,8 @@ class BlockingProcess(
 
     try {
       val stdin = Sink.outputStream(process.getOutputStream)
-      val stdout = Source.inputStream(process.getInputStream)
-      val stderr = Source.inputStream(process.getErrorStream)
+      val stdout = Source.inputStream(process.getInputStream).withAttributes(Attributes.inputBuffer(1, 1))
+      val stderr = Source.inputStream(process.getErrorStream).withAttributes(Attributes.inputBuffer(1, 1))
 
       context.parent ! Started(stdin, stdout, stderr)
     } finally {
