@@ -112,7 +112,7 @@ class Receiver(probe: ActorRef, command: String, stdinInput: immutable.Seq[Strin
       sender() ! process
 
     case BlockingProcess.Started(stdin, stdout, stderr) =>
-      Source(stdout)
+      stdout
         .map(element => Out(element.utf8String))
         .merge(Source(stderr).map(element => Err(element.utf8String)))
         .runWith(Sink.foreach(probe.tell(_, Actor.noSender)))

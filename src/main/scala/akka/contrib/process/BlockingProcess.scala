@@ -7,13 +7,14 @@ package akka.contrib.process
 import akka.actor.{ Actor, ActorLogging, ActorRef, NoSerializationVerificationNeeded, Props, SupervisorStrategy, Terminated }
 import akka.contrib.stream.{ InputStreamPublisher, OutputStreamSubscriber }
 import akka.stream.actor.{ ActorPublisher, ActorSubscriber }
+import akka.stream.scaladsl.Source
 import akka.util.{ ByteString, Helpers }
 import java.io.File
 import java.lang.{ Process => JavaProcess, ProcessBuilder => JavaProcessBuilder }
 import org.reactivestreams.{ Publisher, Subscriber }
 import scala.collection.JavaConverters
 import scala.collection.immutable
-import scala.concurrent.blocking
+import scala.concurrent.{ Future, blocking }
 import scala.concurrent.duration.Duration
 
 object BlockingProcess {
@@ -26,7 +27,7 @@ object BlockingProcess {
    * @param stdout a `org.reactivestreams.Publisher` for the standard output stream of the process
    * @param stderr a `org.reactivestreams.Publisher` for the standard error stream of the process
    */
-  case class Started(stdin: Subscriber[ByteString], stdout: Publisher[ByteString], stderr: Publisher[ByteString])
+  case class Started(stdin: Subscriber[ByteString], stdout: Source[ByteString, Future[Long]], stderr: Publisher[ByteString])
     extends NoSerializationVerificationNeeded
 
   /**
@@ -110,13 +111,12 @@ class BlockingProcess(
       val stdin =
         context.actorOf(OutputStreamSubscriber.props(process.getOutputStream), "stdin")
 
-      val stdout =
-        context.watch(context.actorOf(InputStreamPublisher.props(process.getInputStream, stdioTimeout), "stdout"))
+      val stdout = Source.inputStream(process.getInputStream)
 
       val stderr =
         context.watch(context.actorOf(InputStreamPublisher.props(process.getErrorStream, stdioTimeout), "stderr"))
 
-      context.parent ! Started(ActorSubscriber(stdin), ActorPublisher(stdout), ActorPublisher(stderr))
+      context.parent ! Started(ActorSubscriber(stdin), stdout, ActorPublisher(stderr))
     } finally {
       context.watch(context.actorOf(ProcessDestroyer.props(process, context.parent), "process-destroyer"))
     }
