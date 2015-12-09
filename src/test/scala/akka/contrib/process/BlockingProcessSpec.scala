@@ -6,7 +6,7 @@ package akka.contrib.process
 
 import akka.actor._
 import akka.pattern.ask
-import akka.stream.ClosedShape
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, ClosedShape }
 import akka.stream.javadsl.RunnableGraph
 import akka.stream.scaladsl.{ FlowGraph, ImplicitMaterializer, Merge, Sink, Source }
 import akka.testkit.TestProbe
@@ -98,10 +98,11 @@ object Receiver {
 }
 
 class Receiver(probe: ActorRef, command: String, stdinInput: immutable.Seq[String], nameSeed: Long) extends Actor
-    with Stash
-    with ImplicitMaterializer {
+    with Stash {
 
   val process = context.actorOf(BlockingProcess.props(List(command)), "process" + nameSeed)
+  val materializerSettings = ActorMaterializerSettings.create(context.system).withInputBuffer(initialSize = 1, maxSize = 1)
+  implicit val materializer = ActorMaterializer(materializerSettings)
 
   import FlowGraph.Implicits._
   import Receiver._

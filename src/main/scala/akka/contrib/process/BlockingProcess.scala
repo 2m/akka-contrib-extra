@@ -6,6 +6,7 @@ package akka.contrib.process
 
 import akka.actor.{ Actor, ActorLogging, ActorRef, NoSerializationVerificationNeeded, Props, SupervisorStrategy, Terminated }
 import akka.contrib.stream.{ InputStreamPublisher, OutputStreamSubscriber }
+import akka.stream.Attributes
 import akka.stream.actor.{ ActorPublisher, ActorSubscriber }
 import akka.stream.scaladsl.Source
 import akka.util.{ ByteString, Helpers }
